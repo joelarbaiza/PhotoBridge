@@ -1,0 +1,37 @@
+name: PhotoBridge
+options:
+  bundleIdPrefix: com.photobridge
+  deploymentTarget:
+    iOS: "16.0"
+  createIntermediateGroups: true
+
+targets:
+  PhotoBridgeCompanion:
+    type: application
+    platform: iOS
+    sources:
+      - path: Sources
+    info:
+      path: Generated/Info.plist
+      properties:
+        CFBundleDisplayName: PhotoBridge
+        CFBundleShortVersionString: "0.1.0"
+        CFBundleVersion: "1"
+        # Permiso para AÑADIR al carrete (lo pide PhotoKit):
+        NSPhotoLibraryAddUsageDescription: "PhotoBridge añade tus fotos importadas al carrete, conservando fecha, ubicación y Live Photos."
+        # Hace accesible Documents/ para que el PC empuje archivos vía house_arrest:
+        UIFileSharingEnabled: true
+        LSSupportsOpeningDocumentsInPlace: true
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.photobridge.companion
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SWIFT_VERSION: "5.0"
+        GENERATE_INFOPLIST_FILE: NO
+        # Sin firma: el .ipa sale unsigned y AltStore lo refirma con tu Apple ID
+        CODE_SIGNING_REQUIRED: NO
+        CODE_SIGNING_ALLOWED: NO
+        CODE_SIGN_IDENTITY: ""

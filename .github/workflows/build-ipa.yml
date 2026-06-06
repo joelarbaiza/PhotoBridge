@@ -1,0 +1,57 @@
+name: Build unsigned IPA
+
+# Compila la app companion en un runner macOS GRATUITO de GitHub.
+# Produce un .ipa SIN firma; AltStore/SideStore lo refirma en tu PC con tu Apple ID.
+
+on:
+  push:
+    branches: [ main ]
+    paths: [ "companion_ios/**", ".github/workflows/build-ipa.yml" ]
+  workflow_dispatch:   # permite lanzarlo a mano desde la pestaña Actions
+
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Instalar XcodeGen
+        run: brew install xcodegen
+
+      - name: Generar proyecto Xcode
+        working-directory: companion_ios
+        run: xcodegen generate
+
+      - name: Compilar (sin firma)
+        working-directory: companion_ios
+        run: |
+          set -eo pipefail
+          xcodebuild \
+            -project PhotoBridge.xcodeproj \
+            -target PhotoBridgeCompanion \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            clean build
+
+      - name: Empaquetar .ipa
+        working-directory: companion_ios
+        run: |
+          set -eo pipefail
+          APP="build/Build/Products/Release-iphoneos/PhotoBridgeCompanion.app"
+          if [ ! -d "$APP" ]; then echo "No se encontró el .app"; exit 1; fi
+          rm -rf Payload && mkdir Payload
+          cp -R "$APP" Payload/
+          zip -qr PhotoBridgeCompanion.ipa Payload
+          echo "IPA generado:"; ls -lh PhotoBridgeCompanion.ipa
+
+      - name: Subir artefacto (.ipa)
+        uses: actions/upload-artifact@v4
+        with:
+          name: PhotoBridgeCompanion-ipa
+          path: companion_ios/PhotoBridgeCompanion.ipa
+          if-no-files-found: error

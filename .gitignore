@@ -1,0 +1,8 @@
+﻿__pycache__/
+*.pyc
+.venv/
+companion_ios/build/
+companion_ios/Payload/
+companion_ios/*.xcodeproj/
+companion_ios/Generated/
+*.ipa
