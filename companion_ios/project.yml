@@ -35,3 +35,13 @@ targets:
         CODE_SIGNING_REQUIRED: NO
         CODE_SIGNING_ALLOWED: NO
         CODE_SIGN_IDENTITY: ""
+
+schemes:
+  PhotoBridgeCompanion:
+    build:
+      targets:
+        PhotoBridgeCompanion: all
+    run:
+      config: Release
+    archive:
+      config: Release
