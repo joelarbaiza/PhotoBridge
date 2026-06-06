@@ -4,6 +4,9 @@ options:
   deploymentTarget:
     iOS: "16.0"
   createIntermediateGroups: true
+  # Xcode 15.x (runner macos-14) no entiende el formato 77 que genera XcodeGen
+  # por defecto; fijamos un objectVersion compatible.
+  objectVersion: 56
 
 targets:
   PhotoBridgeCompanion:
