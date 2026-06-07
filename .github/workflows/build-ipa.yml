@@ -73,7 +73,7 @@ jobs:
       # Solo en tags v*.*.* → crear GitHub Release permanente
       - name: Crear GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           name: PhotoBridge ${{ github.ref_name }}
           body: |
