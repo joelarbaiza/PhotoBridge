@@ -5,7 +5,33 @@ en tu iPhone desde Windows, sin poseer un Mac.
 
 ---
 
-## Resumen del flujo completo
+## ⭐ Para otros usuarios: descargar el IPA precompilado
+
+No necesitas compilar nada. Descarga el `.ipa` ya generado desde la
+última **[GitHub Release](https://github.com/joelarbaiza/PhotoBridge/releases/latest)**
+y ve directamente a la [Parte 2](#parte-2--instalar-con-sideloadly).
+
+### ¿Por qué tengo que firmarlo yo?
+
+El `.ipa` está **sin firma de código** por diseño. Apple exige que cada app
+instalada fuera del App Store esté firmada con el Apple ID del usuario que la
+instala. Sideloadly hace esto automáticamente en segundos, gratis.
+
+Lo que **sí** comparten todos los usuarios es el mismo `.ipa` precompilado
+(el binario, las imágenes, el Info.plist). Solo la firma varía de persona a persona.
+
+### Diferencia entre artefacto de Actions y GitHub Release
+
+| Fuente | Permanencia | Cómo acceder |
+|--------|-------------|---------------|
+| Artefacto de GitHub Actions | 90 días (expira) | Pestaña Actions → run → Artifacts |
+| **GitHub Release** | ✅ Permanente | [Releases](https://github.com/joelarbaiza/PhotoBridge/releases) → Assets |
+
+Usa siempre la versión de Releases para obtener el `.ipa` más estable.
+
+---
+
+## Parte 1 — Compilar el .ipa con GitHub Actions (gratis, sin Mac)
 
 ```
 [iPhone origen]  --PhotoBridge (Exportar)-->  [carpeta en PC: LivePhotos/ + Normales/]
@@ -21,12 +47,25 @@ en tu iPhone desde Windows, sin poseer un Mac.
 
 ## Parte 1 — Compilar el .ipa con GitHub Actions (gratis, sin Mac)
 
-1. El repositorio ya incluye `.github/workflows/build-ipa.yml`.
-2. Cualquier push que modifique `companion_ios/**` dispara el workflow
-   automáticamente. También puedes lanzarlo a mano:
-   - GitHub → pestaña **Actions** → **"Build unsigned IPA"** → **Run workflow**.
-3. Cuando termine (✓ verde, ~3-5 min), entra al run → sección **Artifacts** →
-   descarga **`PhotoBridgeCompanion-ipa`**. Dentro está `PhotoBridgeCompanion.ipa`.
+El workflow se dispara de dos formas:
+
+### Push a `main` → artefacto temporal (90 días)
+Cualquier push que modifique `companion_ios/**` genera automáticamente un artefacto
+descargable por 90 días desde la pestaña **Actions**.
+
+### Tag `v*.*.*` → GitHub Release permanente ⭐ (recomendado para distribuir)
+Para crear un Release permanente con el `.ipa` adjunto:
+
+```powershell
+git tag v0.2.0
+git push origin v0.2.0
+```
+
+El workflow detecta el tag, compila el `.ipa` y crea automáticamente un
+**GitHub Release** con el archivo adjunto y las instrucciones de instalación.
+Los usuarios pueden descargarlo desde [Releases](https://github.com/joelarbaiza/PhotoBridge/releases)
+en cualquier momento, sin que expire.
+
 
 > El .ipa sale **sin firma**. Es correcto: Sideloadly lo firma con tu Apple ID.
 

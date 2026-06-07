@@ -12,6 +12,22 @@ Construido sobre [`pymobiledevice3`](https://github.com/doronz88/pymobiledevice3
 
 ---
 
+## 📲 Descargar la app companion (para todos los usuarios)
+
+La app companion (`PhotoBridgeCompanion.ipa`) viene precompilada en cada
+**[GitHub Release](https://github.com/joelarbaiza/PhotoBridge/releases/latest)**.
+
+> **El `.ipa` no tiene firma** — cada usuario lo firma con **su propio Apple ID**
+> usando [Sideloadly](https://sideloadly.io) (gratis). Esto es por diseño:
+> Apple no permite distribuir apps iOS fuera del App Store sin la firma del usuario.
+
+**Pasos rápidos:**
+1. Descarga `PhotoBridgeCompanion.ipa` de la última [Release](https://github.com/joelarbaiza/PhotoBridge/releases/latest).
+2. Instálalo con **Sideloadly** usando tu Apple ID.
+3. Sigue la guía completa en [BUILD_AND_SIDELOAD.md](BUILD_AND_SIDELOAD.md).
+
+---
+
 ## Qué hace (v0.2 — flujo completo)
 
 ### Exportar desde el iPhone origen

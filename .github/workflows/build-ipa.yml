@@ -1,12 +1,18 @@
 name: Build unsigned IPA
 
 # Compila la app companion en un runner macOS GRATUITO de GitHub.
-# Produce un .ipa SIN firma; AltStore/SideStore lo refirma en tu PC con tu Apple ID.
+# Produce un .ipa SIN firma; Sideloadly/AltStore lo refirma en tu PC con tu Apple ID.
+#
+# Se ejecuta en dos situaciones:
+#   1. Push a main que modifique companion_ios/ → sube artefacto temporal (90 días)
+#   2. Push de un tag v*.*.* → además crea un GitHub Release permanente con el .ipa
 
 on:
   push:
     branches: [ main ]
     paths: [ "companion_ios/**", ".github/workflows/build-ipa.yml" ]
+    tags:
+      - "v*.*.*"
   workflow_dispatch:   # permite lanzarlo a mano desde la pestaña Actions
 
 jobs:
@@ -58,3 +64,28 @@ jobs:
           name: PhotoBridgeCompanion-ipa
           path: companion_ios/PhotoBridgeCompanion.ipa
           if-no-files-found: error
+
+      # Solo en tags v*.*.* → crear GitHub Release permanente
+      - name: Crear GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          name: PhotoBridge ${{ github.ref_name }}
+          body: |
+            ## PhotoBridgeCompanion ${{ github.ref_name }}
+
+            App companion para importar fotos y Live Photos al carrete del iPhone desde Windows vía USB.
+
+            ### Instalación
+            1. Descarga `PhotoBridgeCompanion.ipa` (abajo en *Assets*).
+            2. Instálalo con **[Sideloadly](https://sideloadly.io)** usando tu Apple ID.
+               - El .ipa es **sin firma** — necesitas firmarlo tú con tu Apple ID.
+               - Sideloadly hace la firma automáticamente al instalar.
+            3. Sigue las instrucciones en [BUILD_AND_SIDELOAD.md](https://github.com/${{ github.repository }}/blob/main/BUILD_AND_SIDELOAD.md).
+
+            ### Notas
+            - Compatible con iOS 16+.
+            - La app caduca a los 7 días con Apple ID gratuito; reinstala con Sideloadly para renovarla.
+            - Mantén la app en primer plano durante la importación desde el PC.
+          files: companion_ios/PhotoBridgeCompanion.ipa
+          fail_on_unmatched_files: true
