@@ -1,54 +1,55 @@
 # PhotoBridge
 
-Herramienta **open source** para exportar fotos y videos de un iPhone a una PC con
-Windows **conservando los metadatos** (fecha de captura, GPS) y **emparejando
-correctamente las Live Photos** para evitar duplicados al reimportar.
+Herramienta **open source** para migrar fotos y videos entre iPhones desde Windows,
+**conservando metadatos** (fecha de captura, GPS, Live Photos).
 
-Es un MVP estilo iMazing construido sobre [`pymobiledevice3`](https://github.com/doronz88/pymobiledevice3)
+Exporta desde el iPhone origen vía USB y **reimporta directamente al carrete**
+del iPhone destino — incluyendo Live Photos nativas — sin pasar por ningún servicio
+de nube y sin Mac.
+
+Construido sobre [`pymobiledevice3`](https://github.com/doronz88/pymobiledevice3)
 (implementación pura en Python de los protocolos de Apple) con GUI en PySide6 (Qt).
 
 ---
 
-## Qué hace hoy (v0.1)
+## Qué hace (v0.2 — flujo completo)
 
+### Exportar desde el iPhone origen
 - Detecta el iPhone conectado por USB y muestra nombre / modelo / versión de iOS.
 - Escanea `/DCIM` y clasifica todo en **Live Photos**, **fotos** y **videos**.
 - Exporta a una carpeta local **copiando los bytes originales** — nunca convierte
   HEIC→JPG, así que los metadatos EXIF/GPS viajan intactos dentro del archivo.
-- **Importar al iPhone** (sección en la GUI): empuja una carpeta de
-  medios a la app companion vía house_arrest, con barra de progreso.
-  La ingestión al carrete la hace la app en el teléfono (ver ruta B).
-- Opción "Separar Live Photos": deja la salida en dos carpetas
-  - `LivePhotos/` → pares `imagen + .mov` (para reimportar con *Import Live Photos*)
-  - `Normales/`   → fotos sueltas, capturas y videos normales
-  Esto es lo que **elimina el problema de duplicados** al volver a importar.
+- Opción "Separar Live Photos": deja la salida en `LivePhotos/` y `Normales/`.
 
-## Qué NO hace (y por qué, con honestidad)
-
-- **No reimporta al carrete del iPhone nuevo.** Apple no expone un servicio
-  público y estable para *escribir* en la app Fotos vía USB; ese servicio cambia
-  entre versiones de iOS y es justo el "secreto" por el que iMazing/3uTools cobran
-  o invierten años de mantenimiento. Por ahora, para el paso final de *importar*,
-  usa **3uTools → Import Live Photos** sobre `LivePhotos/` y **Import Photos**
-  sobre `Normales/`. Con las carpetas ya separadas, no hay duplicados posibles.
-
-El roadmap más abajo apunta a cerrar también la importación, pero requiere I+D.
+### Importar al iPhone destino ✅ **Funciona completamente**
+- Empuja los archivos al sandbox de la **app companion** vía `house_arrest`
+  (protocolo nativo Apple, sin jailbreak).
+- La app companion los ingesta con **PhotoKit** (`PHAssetCreationRequest`):
+  - Live Photos reconstruidas como Live Photos **nativas** (par `.photo` + `.pairedVideo`).
+  - EXIF, GPS y fecha de captura intactos.
+  - Sin duplicados.
 
 ---
 
 ## Requisitos
 
-- Windows 10/11 con **Python 3.10+**.
-- **iTunes** o *Apple Mobile Device Support* instalado (para los drivers USB de Apple).
-- Cable USB y pulsar **"Confiar"** en el iPhone (desbloqueado) la primera vez.
+### PC (Windows 10/11)
+- **Python 3.10+**
+- **iTunes** o *Apple Mobile Device Support* (drivers USB de Apple)
+- Cable USB y pulsar **"Confiar"** en el iPhone la primera vez
+
+### iPhone destino
+- App companion **PhotoBridgeCompanion** instalada (ver [BUILD_AND_SIDELOAD.md](BUILD_AND_SIDELOAD.md))
+
+---
 
 ## Instalación
 
 ```bash
-git clone <tu-repo>/PhotoBridge.git
+git clone https://github.com/joelarbaiza/PhotoBridge.git
 cd PhotoBridge
 python -m venv .venv
-.venv\Scripts\activate        # PowerShell / CMD en Windows
+.venv\Scripts\activate        # PowerShell
 pip install -r requirements.txt
 ```
 
@@ -58,11 +59,21 @@ pip install -r requirements.txt
 python app.py
 ```
 
-1. **Detectar iPhone** → confirma "Confiar" en el teléfono si lo pide.
-2. **Escanear biblioteca** → verás el conteo por categoría (Live / Fotos / Videos).
-3. Marca **Separar Live Photos** (recomendado), elige **carpeta destino**.
-4. **Exportar**. Al terminar tendrás `LivePhotos/` y `Normales/` listas.
-5. Reimporta al iPhone nuevo con 3uTools (dos pases, sin duplicados).
+### Flujo de exportación (iPhone origen → PC)
+1. Conecta el iPhone **origen** por USB. Pulsa "Confiar" si lo pide.
+2. Clic en **Detectar iPhone** en la app.
+3. Clic en **Escanear biblioteca** → verás el conteo (Live / Fotos / Videos).
+4. Marca **Separar Live Photos** (recomendado), elige carpeta destino.
+5. Clic en **Exportar**. Obtendrás `LivePhotos/` y `Normales/` en tu PC.
+
+### Flujo de importación (PC → iPhone destino)
+1. Instala la app companion en el iPhone destino (ver [BUILD_AND_SIDELOAD.md](BUILD_AND_SIDELOAD.md)).
+2. Conecta el iPhone **destino** por USB.
+3. En la pestaña de importación, elige la carpeta exportada.
+4. **Abre la app PhotoBridge en el iPhone** y mantenla en primer plano.
+5. Clic en **Empujar al iPhone** — la barra de progreso mostrará el avance.
+6. Cuando termine, pulsa **Importar al carrete** en la app del iPhone.
+7. PhotoKit ingesta todo: Live Photos, EXIF y GPS conservados.
 
 ---
 
@@ -70,34 +81,49 @@ python app.py
 
 ```
 PhotoBridge/
-├── app.py                 # GUI PySide6 (hilos QThread para no congelar la UI)
+├── app.py                    # GUI PySide6 — export + import en un solo programa
 ├── requirements.txt
-└── photobridge/
-    ├── __init__.py
-    ├── device.py          # conexión: usbmux + lockdown + AFC
-    └── photos.py          # escaneo /DCIM, clasificación y exportación
+├── photobridge/
+│   ├── device.py             # conexión: usbmux + lockdown + AFC
+│   ├── photos.py             # escaneo /DCIM, clasificación y exportación
+│   └── importer.py           # push al sandbox companion vía house_arrest
+└── companion_ios/
+    ├── project.yml           # spec XcodeGen (genera .xcodeproj en CI)
+    └── Sources/
+        ├── ContentView.swift     # UI SwiftUI
+        ├── ImportService.swift   # InboxScanner + ImportViewModel + PhotoKit
+        └── PhotoBridgeApp.swift
 ```
 
-- `device.py` abre **lockdown** (info/autenticación) y **AFC** (acceso a `/DCIM`).
-- `photos.py` agrupa por nombre base dentro de cada carpeta `NNNAPPLE` para
-  emparejar Live Photos (`IMG_1234.HEIC` + `IMG_1234.MOV`) y exporta por bytes.
+### Cómo funciona el push (detalle técnico)
+
+`VendDocuments` de `HouseArrestService` monta AFC en la **raíz del contenedor**
+de la app (no directamente en `Documents/`). La ruta correcta es:
+
+```
+AFC root/
+└── Documents/
+    └── inbox/       ← aquí escribe importer.py
+```
+
+Por eso `importer.py` usa el prefijo `Documents/inbox/` y `set_file_contents`
+para crear cada archivo. La app Swift lee `Documents/inbox/` con
+`FileManager.contentsOfDirectory(atPath:)`.
+
+---
 
 ## Roadmap
 
-- [ ] Filtros por fecha / tipo (capturas, retrato) en la GUI.
+- [ ] Filtros por fecha / tipo en la GUI.
 - [ ] Vista previa de miniaturas.
 - [ ] Reanudar exportaciones y verificación por hash.
-- [ ] **Investigación de importación** vía servicios de sincronización de fotos
-      de iOS (la parte difícil). Documentar qué es viable por versión de iOS.
 - [ ] Soporte macOS/Linux (pymobiledevice3 ya es multiplataforma).
 
 ## Licencia
 
-MIT (sugerida). Depende de `pymobiledevice3` (LGPL-3.0) y `PySide6` (LGPL-3.0);
-revísalas si vas a distribuir binarios.
+MIT. Depende de `pymobiledevice3` (LGPL-3.0) y `PySide6` (LGPL-3.0).
 
 ## Aviso
 
-Úsalo solo con dispositivos propios. No elude protecciones de Apple ni bypassea
-activación; solo lee el área de medios accesible vía AFC en un dispositivo en el
-que ya confiaste.
+Úsalo solo con dispositivos propios. No elude protecciones de Apple ni bypasea
+activación; usa exclusivamente APIs públicas (AFC/house_arrest y PhotoKit).
