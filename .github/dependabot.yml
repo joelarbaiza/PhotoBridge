@@ -1,0 +1,12 @@
+version: 2
+updates:
+  # Actualiza automáticamente las GitHub Actions cuando salgan nuevas versiones
+  # Dependabot creará un Pull Request por cada actualización disponible
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"   # revisa cada lunes
+    labels:
+      - "dependencies"
+    commit-message:
+      prefix: "ci"
