@@ -48,10 +48,8 @@ async def _push_async(udid, files, bundle_id, progress):
             name = os.path.basename(local)
             remote = posixpath.join(INBOX_DIR, name)  # Documents/inbox/<nombre>
             try:
-                # Leer bytes locales y escribir directo (sin stat previo)
-                with open(local, "rb") as f:
-                    data = f.read()
-                await _call(ha.set_file_contents, remote, data)
+                # push() maneja rutas con subdirectorios (set_file_contents solo funciona en raiz)
+                await _call(ha.push, local, remote)
             except Exception as ex:
                 errors.append(f"{name}: {ex}")
             done += 1
