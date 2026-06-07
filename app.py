@@ -245,9 +245,10 @@ class MainWindow(QMainWindow):
         root.addWidget(imp_title)
 
         imp_help = QLabel(
-            "Empuja una carpeta de medios al iPhone vía la app companion. "
-            "Tras empujar, abre la app PhotoBridge en el teléfono y pulsa "
-            "'Importar al carrete'."
+            "IMPORTANTE: Abre la app PhotoBridge en el iPhone y "
+            "mantenla en pantalla (primer plano) DURANTE toda la transferencia. "
+            "iOS bloquea el acceso al sandbox cuando la app está suspendida.\n"
+            "Tras empujar, pulsa 'Importar al carrete' en la app del iPhone."
         )
         imp_help.setWordWrap(True)
         imp_help.setStyleSheet("color:#6b7280;")
@@ -389,6 +390,20 @@ class MainWindow(QMainWindow):
     def on_push_import(self):
         if not self.import_files or self.device is None:
             return
+
+        # Advertencia: iOS requiere que la app esté en primer plano
+        reply = QMessageBox.question(
+            self, "¿App abierta en el iPhone?",
+            "Antes de continuar:\n\n"
+            "1. Abre la app PhotoBridge en el iPhone.\n"
+            "2. Déjala visible en pantalla (NO en segundo plano).\n"
+            "3. Pulsa OK aquí para iniciar la transferencia.\n\n"
+            "iOS bloquea el acceso al sandbox si la app no está en primer plano.",
+            QMessageBox.Ok | QMessageBox.Cancel,
+        )
+        if reply != QMessageBox.Ok:
+            return
+
         self.btn_import.setEnabled(False)
         self.progress_imp.setValue(0)
         self.imw = ImportWorker(self.device, self.import_files)
