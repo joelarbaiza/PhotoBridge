@@ -18,6 +18,9 @@ on:
 jobs:
   build:
     runs-on: macos-15
+    permissions:
+      contents: write   # necesario para crear GitHub Releases con softprops/action-gh-release
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
