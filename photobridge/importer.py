@@ -12,7 +12,7 @@ from pymobiledevice3.lockdown import create_using_usbmux
 from pymobiledevice3.services.house_arrest import HouseArrestService
 
 COMPANION_BUNDLE_ID = "com.photobridge.companion.772A437WN8"
-INBOX_DIR = ""   # Escribimos en la raíz de Documents (siempre existe)
+INBOX_DIR = "inbox"   # Swift (InboxScanner) busca los archivos en Documents/inbox/
 MEDIA_EXTS = {".heic", ".heif", ".jpg", ".jpeg", ".png",
               ".mov", ".mp4", ".m4v"}
 
@@ -35,14 +35,18 @@ async def _push_async(udid, files, bundle_id, progress):
         await ha.send_command(bundle_id, "VendDocuments")
 
         # Crear carpeta inbox dentro de Documents de la app
-        # (ya no necesario — escribimos en Documents root directamente)
+        # Swift (InboxScanner) busca en Documents/inbox/ — el directorio debe existir.
+        try:
+            await _call(ha.makedirs, INBOX_DIR)
+        except Exception:
+            pass  # ya existe, ignorar
 
         total = len(files)
         done = 0
         errors = []
         for local in files:
             name = os.path.basename(local)
-            remote = name   # directo en Documents root, sin subdirectorio
+            remote = posixpath.join(INBOX_DIR, name)  # Documents/inbox/<nombre>
             try:
                 # Leer bytes locales y escribir directo (sin stat previo)
                 with open(local, "rb") as f:
