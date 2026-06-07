@@ -1,16 +1,23 @@
-# PhotoBridge
+<div align="center">
 
-Herramienta **open source** para migrar fotos y videos entre iPhones desde Windows,
-**conservando metadatos** (fecha de captura, GPS, Live Photos).
+# 📸 PhotoBridge
 
-Exporta desde el iPhone origen vía USB y **reimporta directamente al carrete**
-del iPhone destino — incluyendo Live Photos nativas — sin pasar por ningún servicio
-de nube y sin Mac.
+**Herramienta open source para migrar fotos y videos entre iPhones desde Windows,  
+conservando metadatos (fecha, GPS) y Live Photos — sin Mac, sin nube.**
+
+[![Última versión](https://img.shields.io/github/v/release/joelarbaiza/PhotoBridge?style=flat-square&color=blue&label=Descargar%20IPA)](https://github.com/joelarbaiza/PhotoBridge/releases/latest)
+[![Licencia: MIT](https://img.shields.io/badge/Licencia-MIT-green?style=flat-square)](LICENSE)
+[![Build IPA](https://img.shields.io/github/actions/workflow/status/joelarbaiza/PhotoBridge/build-ipa.yml?style=flat-square&label=Build%20IPA)](https://github.com/joelarbaiza/PhotoBridge/actions)
+
+**🌐 Language / Idioma:** 🇪🇸 Español (este archivo) · [🇺🇸 English](README.en.md)
+
+</div>
 
 Construido sobre [`pymobiledevice3`](https://github.com/doronz88/pymobiledevice3)
 (implementación pura en Python de los protocolos de Apple) con GUI en PySide6 (Qt).
 
 ---
+
 
 ## 📲 Descargar la app companion (para todos los usuarios)
 
