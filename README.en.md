@@ -52,7 +52,7 @@ The companion app (`PhotoBridgeCompanion.ipa`) is pre-built in every
 
 ### PC (Windows 10/11)
 - **Python 3.10+**
-- **iTunes** or *Apple Mobile Device Support* (Apple USB drivers)
+- **iTunes** (Apple’s version, **not** the Microsoft Store one) → [Download iTunes for Windows 64-bit](https://www.apple.com/itunes/download/win64)
 - USB cable and tap **"Trust"** on the iPhone on first connection
 
 ### Destination iPhone
