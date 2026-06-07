@@ -20,12 +20,11 @@ jobs:
     runs-on: macos-15
     permissions:
       contents: write   # necesario para crear GitHub Releases con softprops/action-gh-release
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true   # fuerza Node.js 24 en upload-artifact@v4 (aún no tiene v5)
+
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6   # v5 usa Node.js 24 de forma nativa
+        uses: actions/checkout@v6
 
       - name: Seleccionar Xcode estable más reciente
         run: sudo xcode-select -s "$(ls -d /Applications/Xcode_*.app | sort -V | tail -1)" && xcodebuild -version
