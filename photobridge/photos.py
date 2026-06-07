@@ -1,16 +1,6 @@
 """
-photos.py — Enumeración, clasificación y exportación de medios del iPhone.
-
-Concepto clave de metadatos:
-    Los datos EXIF (fecha de captura, GPS, modelo de cámara) viven DENTRO
-    del archivo. Mientras copiemos los bytes originales sin recomprimir ni
-    convertir, los metadatos se conservan automáticamente. Por eso esta
-    herramienta NUNCA convierte HEIC->JPG: copia el archivo tal cual.
-
-Concepto clave de Live Photos:
-    Una Live Photo es UN elemento en la app Fotos, pero en disco son DOS
-    archivos con el mismo nombre base:  IMG_1234.HEIC  +  IMG_1234.MOV
-    Detectarlas correctamente es lo que evita los duplicados al reimportar.
+photos.py — En pymobiledevice3 9.16 en Windows, TODOS los métodos de AfcService
+son async. scan_dcim y export son async; los workers los llaman con asyncio.run().
 """
 
 import os
@@ -19,36 +9,32 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Callable, Optional
 
-from pymobiledevice3.services.afc import AfcService
-
-# Extensiones que pueden ser el componente "imagen" de una Live Photo
 IMAGE_EXTS = {".heic", ".heif", ".jpg", ".jpeg", ".png"}
 VIDEO_EXTS = {".mov", ".mp4", ".m4v"}
-
 DCIM_ROOT = "/DCIM"
 
 
 class MediaKind(Enum):
-    LIVE_PHOTO = "live_photo"   # par imagen + .mov con el mismo nombre
-    PHOTO = "photo"             # imagen suelta
-    VIDEO = "video"             # video suelto
+    LIVE_PHOTO = "live_photo"
+    PHOTO = "photo"
+    VIDEO = "video"
 
 
 @dataclass
 class MediaItem:
     kind: MediaKind
     base_name: str
-    image_path: Optional[str] = None   # ruta en el dispositivo (AFC)
+    image_path: Optional[str] = None
     video_path: Optional[str] = None
     size: int = 0
 
-    def device_paths(self) -> list[str]:
+    def device_paths(self) -> list:
         return [p for p in (self.image_path, self.video_path) if p]
 
 
 @dataclass
 class ScanResult:
-    items: list[MediaItem] = field(default_factory=list)
+    items: list = field(default_factory=list)
 
     @property
     def live_photos(self):
@@ -76,26 +62,30 @@ def _ext(name: str) -> str:
     return os.path.splitext(name)[1].lower()
 
 
-def scan_dcim(afc: AfcService) -> ScanResult:
-    """
-    Recorre /DCIM en el iPhone y clasifica todo en Live Photos, fotos y
-    videos. Agrupa por nombre base dentro de cada carpeta para emparejar
-    correctamente las Live Photos (imagen + .mov gemelo).
-    """
+async def scan_dcim(afc) -> ScanResult:
+    """Escanea /DCIM de forma async. Todos los métodos de AFC son async en Windows."""
     result = ScanResult()
 
-    # Carpetas tipo /DCIM/100APPLE, /DCIM/101APPLE, ...
-    for entry in afc.listdir(DCIM_ROOT):
+    try:
+        top_entries = await afc.listdir(DCIM_ROOT)
+    except Exception:
+        return result
+
+    for entry in top_entries:
         sub = posixpath.join(DCIM_ROOT, entry)
         try:
-            if not afc.isdir(sub):
+            if not await afc.isdir(sub):
                 continue
         except Exception:
             continue
 
-        # Agrupar archivos de esta carpeta por nombre base
-        grupos: dict[str, dict] = {}
-        for fname in afc.listdir(sub):
+        try:
+            sub_files = await afc.listdir(sub)
+        except Exception:
+            continue
+
+        grupos: dict = {}
+        for fname in sub_files:
             fpath = posixpath.join(sub, fname)
             e = _ext(fname)
             if e not in IMAGE_EXTS and e not in VIDEO_EXTS:
@@ -107,14 +97,14 @@ def scan_dcim(afc: AfcService) -> ScanResult:
             elif e in VIDEO_EXTS:
                 g["vid"] = fpath
 
-        # Clasificar cada grupo
         for base, g in grupos.items():
             img, vid = g["img"], g["vid"]
             size = 0
             for p in (img, vid):
                 if p:
                     try:
-                        size += int(afc.stat(p).get("st_size", 0))
+                        st = await afc.stat(p)
+                        size += int(st.get("st_size", 0))
                     except Exception:
                         pass
 
@@ -133,22 +123,10 @@ def scan_dcim(afc: AfcService) -> ScanResult:
     return result
 
 
-def export(
-    afc: AfcService,
-    scan: ScanResult,
-    dest_root: str,
-    separate_live: bool = True,
-    progress: Optional[Callable[[int, int, str], None]] = None,
-) -> dict:
-    """
-    Exporta los medios al disco local copiando los bytes originales
-    (metadatos intactos).
-
-    separate_live=True organiza la salida en dos carpetas:
-        LivePhotos/  -> pares imagen+.mov (para 'Import Live Photos')
-        Normales/    -> fotos sueltas, capturas y videos normales
-    Esa separación es lo que evita duplicados al reimportar.
-    """
+async def export(afc, scan: ScanResult, dest_root: str,
+                 separate_live: bool = True,
+                 progress: Optional[Callable] = None) -> dict:
+    """Exporta medios al disco local copiando bytes originales (async)."""
     live_dir = os.path.join(dest_root, "LivePhotos")
     norm_dir = os.path.join(dest_root, "Normales")
     if separate_live:
@@ -159,7 +137,7 @@ def export(
 
     total = sum(len(i.device_paths()) for i in scan.items)
     done = 0
-    errors: list[str] = []
+    errors = []
 
     for item in scan.items:
         if separate_live:
@@ -171,7 +149,7 @@ def export(
             fname = posixpath.basename(dev_path)
             out_path = os.path.join(target_dir, fname)
             try:
-                data = afc.get_file_contents(dev_path)  # bytes originales
+                data = await afc.get_file_contents(dev_path)
                 with open(out_path, "wb") as f:
                     f.write(data)
             except Exception as ex:

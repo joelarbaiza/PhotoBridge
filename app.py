@@ -11,6 +11,7 @@ La exportación corre en un hilo aparte (QThread) para no congelar la UI.
 """
 
 import sys
+import asyncio
 import traceback
 
 from PySide6.QtCore import Qt, QThread, Signal
@@ -23,13 +24,15 @@ from PySide6.QtWidgets import (
 
 from photobridge.device import IDevice
 from photobridge.photos import scan_dcim, export, ScanResult
-from photobridge.importer import push_files, companion_installed, gather_media
+from photobridge.importer import push_files, gather_media
+from pymobiledevice3.lockdown import create_using_usbmux
+from pymobiledevice3.services.afc import AfcService
 
 
 # ----------------------------- Hilos de trabajo -----------------------------
 
 class ScanWorker(QThread):
-    finished_ok = Signal(object)        # ScanResult
+    finished_ok = Signal(object)
     failed = Signal(str)
 
     def __init__(self, device: IDevice):
@@ -37,16 +40,27 @@ class ScanWorker(QThread):
         self.device = device
 
     def run(self):
+        async def _do():
+            lockdown = await create_using_usbmux(serial=self.device.udid)
+            try:
+                afc = AfcService(lockdown)
+                try:
+                    return await scan_dcim(afc)
+                finally:
+                    try: await afc.close()
+                    except Exception: pass
+            finally:
+                try: await lockdown.close()
+                except Exception: pass
         try:
-            afc = self.device.open_media()
-            result = scan_dcim(afc)
+            result = asyncio.run(_do())
             self.finished_ok.emit(result)
         except Exception:
             self.failed.emit(traceback.format_exc())
 
 
 class ExportWorker(QThread):
-    progress = Signal(int, int, str)    # done, total, filename
+    progress = Signal(int, int, str)
     finished_ok = Signal(dict)
     failed = Signal(str)
 
@@ -59,21 +73,31 @@ class ExportWorker(QThread):
         self.separate_live = separate_live
 
     def run(self):
+        async def _do():
+            lockdown = await create_using_usbmux(serial=self.device.udid)
+            try:
+                afc = AfcService(lockdown)
+                try:
+                    return await export(
+                        afc, self.scan, self.dest,
+                        separate_live=self.separate_live,
+                        progress=lambda d, t, n: self.progress.emit(d, t, n),
+                    )
+                finally:
+                    try: await afc.close()
+                    except Exception: pass
+            finally:
+                try: await lockdown.close()
+                except Exception: pass
         try:
-            afc = self.device.afc or self.device.open_media()
-            res = export(
-                afc, self.scan, self.dest,
-                separate_live=self.separate_live,
-                progress=lambda d, t, n: self.progress.emit(d, t, n),
-            )
+            res = asyncio.run(_do())
             self.finished_ok.emit(res)
         except Exception:
             self.failed.emit(traceback.format_exc())
 
 
 class ImportWorker(QThread):
-    """Empuja archivos al sandbox de la app companion (ruta B)."""
-    progress = Signal(int, int, str)    # done, total, filename
+    progress = Signal(int, int, str)
     finished_ok = Signal(dict)
     failed = Signal(str)
 
@@ -84,10 +108,8 @@ class ImportWorker(QThread):
 
     def run(self):
         try:
-            if self.device.lockdown is None:
-                self.device.connect()
             res = push_files(
-                self.device.lockdown, self.files,
+                self.device.udid, self.files,
                 progress=lambda d, t, n: self.progress.emit(d, t, n),
             )
             self.finished_ok.emit(res)
@@ -367,22 +389,6 @@ class MainWindow(QMainWindow):
     def on_push_import(self):
         if not self.import_files or self.device is None:
             return
-        # Aviso si la app companion no parece instalada
-        try:
-            if self.device.lockdown is None:
-                self.device.connect()
-            if not companion_installed(self.device.lockdown):
-                QMessageBox.warning(
-                    self, "App companion no encontrada",
-                    "No se detectó la app PhotoBridge en el iPhone.\n"
-                    "Instálala con AltStore (ver BUILD_AND_SIDELOAD.md) antes de "
-                    "importar; sin ella iOS no permite escribir el carrete."
-                )
-                return
-        except Exception as ex:
-            QMessageBox.critical(self, "Error", str(ex))
-            return
-
         self.btn_import.setEnabled(False)
         self.progress_imp.setValue(0)
         self.imw = ImportWorker(self.device, self.import_files)
