@@ -64,7 +64,7 @@ jobs:
           echo "IPA generado:"; ls -lh PhotoBridgeCompanion.ipa
 
       - name: Subir artefacto (.ipa)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: PhotoBridgeCompanion-ipa
           path: companion_ios/PhotoBridgeCompanion.ipa
