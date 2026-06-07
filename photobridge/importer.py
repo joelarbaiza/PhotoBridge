@@ -48,8 +48,15 @@ async def _push_async(udid, files, bundle_id, progress):
             name = os.path.basename(local)
             remote = posixpath.join(INBOX_DIR, name)  # Documents/inbox/<nombre>
             try:
-                # push() maneja rutas con subdirectorios (set_file_contents solo funciona en raiz)
-                await _call(ha.push, local, remote)
+                with open(local, "rb") as f:
+                    data = f.read()
+                # fopen/fwrite/fclose: operaciones AFC primitivas que CREAN el archivo
+                # sin hacer GET_FILE_INFO previo (que falla con status 8 en nuevos destinos).
+                handle = await _call(ha.fopen, remote, "w")
+                try:
+                    await _call(ha.fwrite, handle, data)
+                finally:
+                    await _call(ha.fclose, handle)
             except Exception as ex:
                 errors.append(f"{name}: {ex}")
             done += 1
