@@ -38,20 +38,36 @@ enum InboxScanner {
     /// Agrupa por nombre base para detectar Live Photos (imagen + .mov gemelo).
     static func scan() -> [PendingItem] {
         let fm = FileManager.default
-        guard let files = try? fm.contentsOfDirectory(
-            at: inboxURL, includingPropertiesForKeys: nil) else { return [] }
+        let inbox = inboxURL
+
+        print("[InboxScanner] Buscando en: \(inbox.path)")
+        print("[InboxScanner] inbox existe: \(fm.fileExists(atPath: inbox.path))")
+
+        // Intentar con contentsOfDirectory(atPath:) — variante string, más básica
+        let names: [String]
+        do {
+            names = try fm.contentsOfDirectory(atPath: inbox.path)
+            print("[InboxScanner] contentsOfDirectory(atPath:) -> \(names.count) archivos")
+            if !names.isEmpty { print("[InboxScanner] Primeros 3: \(Array(names.prefix(3)))") }
+        } catch {
+            print("[InboxScanner] ERROR contentsOfDirectory: \(error)")
+            return []
+        }
 
         var groups: [String: PendingItem] = [:]
-        for url in files {
-            let ext = url.pathExtension.lowercased()
-            let base = url.deletingPathExtension().lastPathComponent
+        for name in names {
+            let url = inbox.appendingPathComponent(name)
+            let ext = (name as NSString).pathExtension.lowercased()
+            let base = (name as NSString).deletingPathExtension
             var item = groups[base] ?? PendingItem(baseName: base,
                                                    imageURL: nil, videoURL: nil)
             if imageExts.contains(ext) { item.imageURL = url }
             else if videoExts.contains(ext) { item.videoURL = url }
             groups[base] = item
         }
-        return Array(groups.values)
+        let result = Array(groups.values).filter { $0.imageURL != nil || $0.videoURL != nil }
+        print("[InboxScanner] -> \(result.count) items en cola")
+        return result
     }
 }
 
