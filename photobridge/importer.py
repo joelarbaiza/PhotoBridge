@@ -12,7 +12,7 @@ from pymobiledevice3.lockdown import create_using_usbmux
 from pymobiledevice3.services.house_arrest import HouseArrestService
 
 COMPANION_BUNDLE_ID = "com.photobridge.companion.772A437WN8"
-INBOX_DIR = "inbox"   # Swift (InboxScanner) busca los archivos en Documents/inbox/
+INBOX_DIR = "Documents/inbox"   # VendDocuments monta AFC en la raiz del contenedor, NO en Documents/
 MEDIA_EXTS = {".heic", ".heif", ".jpg", ".jpeg", ".png",
               ".mov", ".mp4", ".m4v"}
 
@@ -34,8 +34,9 @@ async def _push_async(udid, files, bundle_id, progress):
         # si el bundle ID no coincide — ese error llegará al usuario.
         await ha.send_command(bundle_id, "VendDocuments")
 
-        # Crear carpeta inbox dentro de Documents de la app
-        # Swift (InboxScanner) busca en Documents/inbox/ — el directorio debe existir.
+        # Crear carpeta Documents/inbox dentro del contenedor de la app.
+        # VendDocuments NO monta en Documents/, sino en el contenedor raiz.
+        # makedirs crea los intermedios si no existen.
         try:
             await _call(ha.makedirs, INBOX_DIR)
         except Exception:
@@ -50,13 +51,8 @@ async def _push_async(udid, files, bundle_id, progress):
             try:
                 with open(local, "rb") as f:
                     data = f.read()
-                # fopen/fwrite/fclose: operaciones AFC primitivas que CREAN el archivo
-                # sin hacer GET_FILE_INFO previo (que falla con status 8 en nuevos destinos).
-                handle = await _call(ha.fopen, remote, "w")
-                try:
-                    await _call(ha.fwrite, handle, data)
-                finally:
-                    await _call(ha.fclose, handle)
+                # set_file_contents funciona cuando la ruta incluye Documents/
+                await _call(ha.set_file_contents, remote, data)
             except Exception as ex:
                 errors.append(f"{name}: {ex}")
             done += 1
